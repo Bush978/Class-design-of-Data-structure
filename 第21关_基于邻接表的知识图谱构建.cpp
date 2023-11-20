@@ -1,0 +1,136 @@
+#include <bits/stdc++.h>
+#define MVNum 10000
+using namespace std;
+
+string Relationship[] = { "有功效","有食谱","有推荐食材","有证机概要" };
+typedef struct ArcNode{
+	int adjvex;                     // 该边所指向顶点的位置
+	int relationship;               // 表示边的类型，即关系的类型，对应为数组下标 
+	struct ArcNode* nextarc;        // 下一条边
+} ArcNode;                          // 边结点
+
+string Entity[] = { "食材","疾病","功效","食谱","证机概要" };
+typedef struct VNode {
+	int entity;                     // 表示顶点的类型，即实体的类型，对应为数组下标
+	string info;                    // 表示顶点的内容，即实体的内容
+	ArcNode* firstarc;              // 指向第一条依附该顶点的边的指针
+} VNode, AdjList[MVNum];
+
+typedef struct ALGraph{
+	AdjList vertices;               // 邻接表
+	int vexnum, arcnum;             // 图的当前顶点数和边数
+} ALGraph;
+
+int LocateVex(ALGraph& G, string str) {
+	// 返回str在AdjList中的位置
+	for(int i = 0; i < G.vexnum; i++)
+		if (G.vertices[i].info == str) return i;
+	return -1;
+}
+
+int LocateEntity(string str) {
+	// 返回str在Entity数组中的位置
+	int i = 0;
+	while (i < 5)
+	{
+		if (Entity[i] == str) return i;
+		i++;
+	}
+	return -1;
+}
+
+int LocateRelationship(string str) {
+	// 返回str在Relationship数组中的位置
+	int i = 0;
+	while (i < 4)
+	{
+		if (Relationship[i] == str) return i;
+		i++;
+	}
+	return -1;
+}
+
+void InitALGraph(ALGraph& G) {
+	// 初始化邻接表
+	G.vexnum = 0;
+	G.arcnum = 0;
+	for(int i = 0; i < MVNum; i++)
+	G.vertices[i].firstarc = NULL;
+}
+
+void CreateAdjList(ALGraph& G, string inputFile) {
+	// 从filename中按顺序读取实体存入邻接表
+	ifstream fin(inputFile);
+	string line;
+	while (getline(fin, line)) {
+		istringstream iss(line);
+		string leftPart, rightPart;
+		iss >> leftPart >> rightPart;
+		int i = LocateEntity(rightPart);
+		string temp = leftPart;
+		G.vertices[G.vexnum].entity = i;
+		G.vertices[G.vexnum].info = temp;
+		G.vertices[G.vexnum].firstarc = NULL;
+		G.vexnum++;
+	}
+}
+
+void CreateUDG(ALGraph& G, string filename) {
+	// 从filename中按顺序三元组存入邻接表
+	ifstream fin(filename);
+	string line;
+	while (getline(fin, line)) {
+		istringstream iss(line);
+		string leftPart, middlePart, rightPart;
+		iss >> leftPart >> middlePart >> rightPart;
+		int lpos = LocateVex(G, leftPart);
+		int rpos = LocateVex(G,rightPart);
+		if (lpos != -1)
+		{
+			ArcNode* p = new ArcNode;
+			p->adjvex = rpos;
+			p->relationship = LocateRelationship(middlePart);
+			p->nextarc = G.vertices[lpos].firstarc;
+			G.vertices[lpos].firstarc = p;
+			G.arcnum++;
+		}
+		if(rpos != -1){
+			ArcNode* p = new ArcNode;
+			//cout << rightPart << endl;
+			p->adjvex = lpos;
+			p->relationship = LocateRelationship(middlePart);
+			p->nextarc = G.vertices[rpos].firstarc;
+			G.vertices[rpos].firstarc = p;
+			G.arcnum++;
+		}
+	}
+
+}
+
+
+void PrintGraph(ALGraph& G) {
+	for (int i = 0; i < G.vexnum; i++) {
+		ArcNode* p = G.vertices[i].firstarc;
+		if (p == NULL) {
+			continue;
+		}
+		else {
+			while (p) {
+				cout << G.vertices[i].info << ' ';
+				cout << p->relationship << " ";
+				cout << G.vertices[p->adjvex].info << " ";
+				cout << endl;
+				p = p->nextarc;
+			}
+		}
+	}
+}
+
+int main() {
+	ALGraph G;
+	InitALGraph(G);
+	CreateAdjList(G, "entity.txt");
+	CreateUDG(G, "relationship.txt");
+	PrintGraph(G);
+	return 0;
+}
